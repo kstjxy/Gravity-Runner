@@ -21,10 +21,10 @@ public class CameraFollow : MonoBehaviour
     {
         if (!target || !player) return;
 
-        // Detect flip event (change in onCeiling)
+        // Detect flip event
         if (player.onCeiling != prevOnCeiling)
         {
-            flipBlend = 1f;               // trigger pulse
+            flipBlend = 1f;
             prevOnCeiling = player.onCeiling;
         }
 
@@ -32,12 +32,12 @@ public class CameraFollow : MonoBehaviour
         if (flipBlend > 0f)
             flipBlend = Mathf.MoveTowards(flipBlend, 0f, Time.deltaTime / Mathf.Max(0.0001f, flipRecoverTime));
 
-        // Invert offset vertically when ceiling-running
+        // Offset: invert vertically when ceiling-running
         Vector3 baseOffset = player.onCeiling
             ? new Vector3(offset.x, -Mathf.Abs(offset.y), offset.z)
             : new Vector3(offset.x, Mathf.Abs(offset.y), offset.z);
 
-        // Closer offset during flip pulse
+        // Zoom pulse
         Vector3 closerOffset = baseOffset * flipZoomFactor;
         Vector3 useOffset = Vector3.Lerp(baseOffset, closerOffset, flipBlend);
 
@@ -45,11 +45,11 @@ public class CameraFollow : MonoBehaviour
         Vector3 desired = target.position + useOffset;
         transform.position = Vector3.Lerp(transform.position, desired, Time.deltaTime * followLerp);
 
-        // Look at the player with correct world up
-        Vector3 lookAt = target.position + target.forward * 10f;
+        // Always point straight forward (+Z) with correct up
+        Vector3 forward = Vector3.forward;
         Vector3 up = player.onCeiling ? Vector3.down : Vector3.up;
 
-        Quaternion lookRot = Quaternion.LookRotation((lookAt - transform.position).normalized, up);
+        Quaternion lookRot = Quaternion.LookRotation(forward, up);
         transform.rotation = Quaternion.Slerp(transform.rotation, lookRot, Time.deltaTime * followLerp);
     }
 }
