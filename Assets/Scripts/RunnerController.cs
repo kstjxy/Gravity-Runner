@@ -16,10 +16,15 @@ public class PlayerMovement : MonoBehaviour
     public float gravityAccel = 25f;      // "fall" acceleration
     public float flipCooldown = 0.5f;
     private float flipTimer = 0f;
-    private bool hasGrounded = false;
+    private bool hasGrounded = true;
 
     [Header("Ground Check")]
     public float groundCheckDist = 1.1f;
+
+    [Header("Death Bounds")]
+    public float deathBelowY = -1f; // slightly below floor
+    public float deathAboveY = 11f;  // slightly above ceil
+
 
     private Rigidbody rb;
 
@@ -50,7 +55,7 @@ public class PlayerMovement : MonoBehaviour
         transform.position = pos;
 
         // --- Jump ---
-        if ((Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.Space))
+        if ((Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0))
             && IsGrounded())
         {
             Vector3 impulse = (onCeiling ? Vector3.down : Vector3.up) * jumpForce;
@@ -59,7 +64,9 @@ public class PlayerMovement : MonoBehaviour
         }
 
         // --- Gravity switch ---
-        if (Input.GetKeyDown(KeyCode.Space))
+        if (!hasGrounded && IsGrounded())
+            hasGrounded = true;
+        if (Input.GetMouseButtonDown(0))
             TryFlip();
 
         if (flipTimer > 0f) flipTimer -= Time.deltaTime;
@@ -70,6 +77,18 @@ public class PlayerMovement : MonoBehaviour
         // Custom gravity
         Vector3 gdir = onCeiling ? Vector3.up : Vector3.down;
         rb.AddForce(gdir * gravityAccel, ForceMode.Acceleration);
+    }
+
+    void LateUpdate()
+    {
+        // If GameManager says we're not running, do nothing
+        if (GameManager.Instance != null && !GameManager.Instance.isRunning) return;
+
+        // Death check by Y bounds
+        if (transform.position.y < deathBelowY || transform.position.y > deathAboveY)
+        {
+            if (GameManager.Instance != null) GameManager.Instance.GameOver();
+        }
     }
 
     void TryFlip()
@@ -87,9 +106,6 @@ public class PlayerMovement : MonoBehaviour
     bool IsGrounded()
     {
         Vector3 dir = onCeiling ? Vector3.up : Vector3.down;
-        bool res = Physics.Raycast(transform.position, dir, groundCheckDist, ~0, QueryTriggerInteraction.Ignore);
-        if (res)
-            hasGrounded = true;
-        return res;
+        return Physics.Raycast(transform.position, dir, groundCheckDist, ~0, QueryTriggerInteraction.Ignore);
     }
 }

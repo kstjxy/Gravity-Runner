@@ -61,6 +61,7 @@ public class SegmentSpawner : MonoBehaviour
 
     void Update()
     {
+        if (GameManager.Instance && !GameManager.Instance.isRunning) return;
         if (!player) return;
 
         float playerZ = player.position.z;
@@ -114,7 +115,7 @@ public class SegmentSpawner : MonoBehaviour
             return;
         }
 
-        PlaceByKind(go, seg); // adjusts Y/rot for Ceil only; Floor/Conn left as-authored
+        PlaceByKind(go, seg); // adjusts Y/rot for Ceil only; Floor/Conn left
 
         go.transform.position = new Vector3(laneX, go.transform.position.y, trackEndZ);
 
@@ -228,10 +229,6 @@ public class SegmentSpawner : MonoBehaviour
             var pos = go.transform.position;
             pos.y = 0f;
             go.transform.position = pos;
-
-            // (Optional) If you author Conn at 0 rotation, keep identity:
-            // go.transform.rotation = Quaternion.identity;
-            // If you author custom rotations in prefab, do nothing here.
         }
     }
 }

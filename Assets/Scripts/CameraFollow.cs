@@ -45,7 +45,7 @@ public class CameraFollow : MonoBehaviour
         Vector3 desired = target.position + useOffset;
         transform.position = Vector3.Lerp(transform.position, desired, Time.deltaTime * followLerp);
 
-        // Look at the player with correct world up (no pitch offset anymore)
+        // Look at the player with correct world up
         Vector3 lookAt = target.position + target.forward * 10f;
         Vector3 up = player.onCeiling ? Vector3.down : Vector3.up;
 
