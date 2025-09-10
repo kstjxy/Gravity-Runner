@@ -1,11 +1,13 @@
 using UnityEngine;
 
-public class PlayerMovement : MonoBehaviour
+public class RunnerController : MonoBehaviour
 {
     [Header("Movement Speeds")]
     public float playerSpeed = 10f;       // forward speed (m/s)
     public float horizontalSpeed = 8f;    // strafe speed (m/s)
-    public float jumpForce = 10f;          // jump impulse
+    public float jumpForce = 10f;         // jump impulse
+    public float jumpCooldown = 0.2f;
+    private float jumpTimer = 0f;
 
     [Header("Left/Right Bounds")]
     public float leftLimit = -5.5f;
@@ -16,14 +18,20 @@ public class PlayerMovement : MonoBehaviour
     public float gravityAccel = 25f;      // "fall" acceleration
     public float flipCooldown = 0.5f;
     private float flipTimer = 0f;
-    private bool hasGrounded = true;
 
     [Header("Ground Check")]
     public float groundCheckDist = 1.1f;
 
     [Header("Death Bounds")]
-    public float deathBelowY = -1f; // slightly below floor
-    public float deathAboveY = 11f;  // slightly above ceil
+    public float deathBelowY = -1f;       // slightly below floor
+    public float deathAboveY = 11f;       // slightly above ceil
+
+    [Header("Animation")]
+    public Animator animator;             // assign in inspector (runner model)
+
+
+    private bool fallingFromFlip = false; // true after flip until grounded again
+    private bool isJumping = false;
 
 
     private Rigidbody rb;
@@ -32,16 +40,21 @@ public class PlayerMovement : MonoBehaviour
     {
         rb = GetComponent<Rigidbody>();
         rb.useGravity = false;  // custom gravity
+
+        //animator.SetBool("isJumping", false);
+        animator.SetBool("isFalling", false);
     }
 
     void Update()
     {
+        // Stop all control if game ended
+        if (GameManager.Instance != null && !GameManager.Instance.isRunning) return;
+
         // --- Constant forward motion ---
         transform.Translate(Vector3.forward * Time.deltaTime * playerSpeed, Space.World);
 
         // --- Horizontal input ---
         float xInput = 0f;
-
         if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) xInput = -1f;
         if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) xInput = 1f;
 
@@ -54,26 +67,48 @@ public class PlayerMovement : MonoBehaviour
         pos.x = Mathf.Clamp(pos.x, leftLimit, rightLimit);
         transform.position = pos;
 
-        // --- Jump ---
-        if ((Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0))
-            && IsGrounded())
+        // --- Jump (W / UpArrow / Space) ---
+        if ((Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.Space))
+            && IsGrounded() && !fallingFromFlip && !isJumping)
         {
+            isJumping = true;
+            jumpTimer = jumpCooldown;
             Vector3 impulse = (onCeiling ? Vector3.down : Vector3.up) * jumpForce;
             Vector3 v = rb.velocity; v.y = 0f; rb.velocity = v;
             rb.AddForce(impulse, ForceMode.VelocityChange);
+
+            // Play jump animation
+            
+            //animator.SetBool("isJumping", true);
+        }
+        else if (isJumping && jumpTimer<= 0 && IsGrounded())
+        {
+            
+            isJumping = false;
+            //animator.SetBool("isJumping", false);
         }
 
-        // --- Gravity switch ---
-        if (!hasGrounded && IsGrounded())
-            hasGrounded = true;
+        // --- Gravity switch---
         if (Input.GetMouseButtonDown(0))
             TryFlip();
 
         if (flipTimer > 0f) flipTimer -= Time.deltaTime;
+        if (jumpTimer > 0f) jumpTimer -= Time.deltaTime;
+
+        // --- Animation state maintenance ---
+        // If we finished a flip and got grounded again, return to Run
+        if (fallingFromFlip && IsGrounded())
+        {
+            fallingFromFlip = false;
+            //animator.Play("Run", 0, 0f);
+            animator.SetBool("isFalling", false);
+        }
     }
 
     void FixedUpdate()
     {
+        if (GameManager.Instance != null && !GameManager.Instance.isRunning) return;
+
         // Custom gravity
         Vector3 gdir = onCeiling ? Vector3.up : Vector3.down;
         rb.AddForce(gdir * gravityAccel, ForceMode.Acceleration);
@@ -81,7 +116,6 @@ public class PlayerMovement : MonoBehaviour
 
     void LateUpdate()
     {
-        // If GameManager says we're not running, do nothing
         if (GameManager.Instance != null && !GameManager.Instance.isRunning) return;
 
         // Death check by Y bounds
@@ -94,13 +128,22 @@ public class PlayerMovement : MonoBehaviour
     void TryFlip()
     {
         if (flipTimer > 0f) return;
-        if (!hasGrounded) return;
+        if (fallingFromFlip) return;
+
+        Vector3 impulse = (onCeiling ? Vector3.down : Vector3.up) * jumpForce/4;
+        Vector3 v = rb.velocity; v.y = 0f; rb.velocity = v;
+        rb.AddForce(impulse, ForceMode.VelocityChange);
+
         flipTimer = flipCooldown;
         onCeiling = !onCeiling;
-        hasGrounded = false;
 
         // Visual flip
         transform.rotation = transform.rotation * Quaternion.Euler(0f, 0f, 180f);
+
+        // Enter falling animation until grounded again
+        fallingFromFlip = true;
+        //animator.Play("Fall", 0, 0f);
+        animator.SetBool("isFalling", true);
     }
 
     bool IsGrounded()

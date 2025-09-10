@@ -1310,7 +1310,7 @@ MonoBehaviour:
   player: {fileID: 2025446037}
   offset: {x: 0, y: 2.25, z: -3.25}
   followLerp: 10
-  flipZoomFactor: 0.7
+  flipZoomFactor: 0.5
   flipRecoverTime: 0.35
 --- !u!1 &1006071663
 GameObject:
@@ -1379,7 +1379,7 @@ Animator:
   m_GameObject: {fileID: 1046179209}
   m_Enabled: 1
   m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 9100000, guid: 78f5f91705700744689fa86549a99d3f, type: 2}
+  m_Controller: {fileID: 9100000, guid: 31987deda41a33f4f99f80556276f502, type: 2}
   m_CullingMode: 0
   m_UpdateMode: 0
   m_ApplyRootMotion: 0
@@ -1676,14 +1676,16 @@ MonoBehaviour:
   playerSpeed: 15
   horizontalSpeed: 8
   jumpForce: 10
+  jumpCooldown: 0.2
   leftLimit: -5.5
   rightLimit: 5.5
   onCeiling: 0
   gravityAccel: 25
   flipCooldown: 0.25
-  groundCheckDist: 1.2
+  groundCheckDist: 1.1
   deathBelowY: -1
   deathAboveY: 11
+  animator: {fileID: 1046179211}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

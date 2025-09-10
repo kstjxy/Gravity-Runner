@@ -3,13 +3,13 @@ using UnityEngine;
 public class CameraFollow : MonoBehaviour
 {
     public Transform target;
-    public PlayerMovement player;
+    public RunnerController player;
     public Vector3 offset = new Vector3(0f, 3f, -5f);
     public float followLerp = 10f;
 
     [Header("Flip Pulse")]
     [Tooltip("How close the camera gets during a flip (1 = no change, 0.6 = 40% closer).")]
-    [Range(0.4f, 1f)] public float flipZoomFactor = 0.6f;
+    [Range(0.2f, 1f)] public float flipZoomFactor = 0.6f;
     [Tooltip("How long it takes for the camera to return to normal after a flip.")]
     public float flipRecoverTime = 0.35f;
 
