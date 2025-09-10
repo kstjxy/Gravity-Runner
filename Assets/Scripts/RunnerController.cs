@@ -1,26 +1,32 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class PlayerMovement : MonoBehaviour
 {
     [Header("Movement Speeds")]
-    public float playerSpeed = 10f;       // forward speed
-    public float horizontalSpeed = 5f;    // left/right strafe
-    public float jumpForce = 7f;          // jump impulse
+    public float playerSpeed = 10f;       // forward speed (m/s)
+    public float horizontalSpeed = 8f;    // strafe speed (m/s)
+    public float jumpForce = 10f;          // jump impulse
 
     [Header("Left/Right Bounds")]
     public float leftLimit = -5.5f;
     public float rightLimit = 5.5f;
 
+    [Header("Gravity Switch")]
+    public bool onCeiling = false;        // current state
+    public float gravityAccel = 25f;      // "fall" acceleration
+    public float flipCooldown = 0.5f;
+    private float flipTimer = 0f;
+    private bool hasGrounded = false;
+
     [Header("Ground Check")]
-    public float groundCheckDist = 1f;
+    public float groundCheckDist = 1.1f;
 
     private Rigidbody rb;
 
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
+        rb.useGravity = false;  // custom gravity
     }
 
     void Update()
@@ -28,32 +34,62 @@ public class PlayerMovement : MonoBehaviour
         // --- Constant forward motion ---
         transform.Translate(Vector3.forward * Time.deltaTime * playerSpeed, Space.World);
 
-        // --- Left movement ---
-        if ((Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) &&
-            transform.position.x > leftLimit)
-        {
-            transform.Translate(Vector3.left * Time.deltaTime * horizontalSpeed, Space.World);
-        }
+        // --- Horizontal input ---
+        float xInput = 0f;
 
-        // --- Right movement ---
-        if ((Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) &&
-            transform.position.x < rightLimit)
-        {
-            transform.Translate(Vector3.right * Time.deltaTime * horizontalSpeed, Space.World);
-        }
+        if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) xInput = -1f;
+        if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) xInput = 1f;
+
+        // Invert when on ceiling
+        if (onCeiling) xInput *= -1f;
+
+        // Apply horizontal movement with clamp
+        Vector3 pos = transform.position;
+        pos += Vector3.right * xInput * horizontalSpeed * Time.deltaTime;
+        pos.x = Mathf.Clamp(pos.x, leftLimit, rightLimit);
+        transform.position = pos;
 
         // --- Jump ---
         if ((Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.Space))
             && IsGrounded())
         {
-            rb.AddForce(Vector3.up * jumpForce, ForceMode.VelocityChange);
+            Vector3 impulse = (onCeiling ? Vector3.down : Vector3.up) * jumpForce;
+            Vector3 v = rb.velocity; v.y = 0f; rb.velocity = v;
+            rb.AddForce(impulse, ForceMode.VelocityChange);
         }
+
+        // --- Gravity switch ---
+        if (Input.GetKeyDown(KeyCode.Space))
+            TryFlip();
+
+        if (flipTimer > 0f) flipTimer -= Time.deltaTime;
+    }
+
+    void FixedUpdate()
+    {
+        // Custom gravity
+        Vector3 gdir = onCeiling ? Vector3.up : Vector3.down;
+        rb.AddForce(gdir * gravityAccel, ForceMode.Acceleration);
+    }
+
+    void TryFlip()
+    {
+        if (flipTimer > 0f) return;
+        if (!hasGrounded) return;
+        flipTimer = flipCooldown;
+        onCeiling = !onCeiling;
+        hasGrounded = false;
+
+        // Visual flip
+        transform.rotation = transform.rotation * Quaternion.Euler(0f, 0f, 180f);
     }
 
     bool IsGrounded()
     {
-        Debug.DrawRay(transform.position, Vector3.down * groundCheckDist, Color.green);
-        // No mask: just raycast down against any collider
-        return Physics.Raycast(transform.position, Vector3.down, groundCheckDist, ~0, QueryTriggerInteraction.Ignore);
+        Vector3 dir = onCeiling ? Vector3.up : Vector3.down;
+        bool res = Physics.Raycast(transform.position, dir, groundCheckDist, ~0, QueryTriggerInteraction.Ignore);
+        if (res)
+            hasGrounded = true;
+        return res;
     }
 }
