@@ -29,20 +29,36 @@ public class RunnerController : MonoBehaviour
     [Header("Animation")]
     public Animator animator;             // assign in inspector (runner model)
 
-
     private bool fallingFromFlip = false; // true after flip until grounded again
     private bool isJumping = false;
 
-
     private Rigidbody rb;
+
+    // --- Helpers ---
+    void AlignToForward()
+    {
+        // Always face world +Z. Flip 'up' based on ceiling state.
+        Vector3 up = onCeiling ? Vector3.down : Vector3.up;
+        transform.rotation = Quaternion.LookRotation(Vector3.forward, up);
+    }
 
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
         rb.useGravity = false;  // custom gravity
 
-        animator.SetBool("isJumping", false);
-        animator.SetBool("isFalling", false);
+        // Prevent physics from rotating the runner
+        rb.constraints |= RigidbodyConstraints.FreezeRotationX
+                       | RigidbodyConstraints.FreezeRotationY
+                       | RigidbodyConstraints.FreezeRotationZ;
+
+        if (animator)
+        {
+            animator.SetBool("isJumping", false);
+            animator.SetBool("isFalling", false);
+        }
+
+        AlignToForward();
     }
 
     void Update()
@@ -73,20 +89,20 @@ public class RunnerController : MonoBehaviour
         {
             isJumping = true;
             jumpTimer = jumpCooldown;
+
             Vector3 impulse = (onCeiling ? Vector3.down : Vector3.up) * jumpForce;
             Vector3 v = rb.velocity; v.y = 0f; rb.velocity = v;
             rb.AddForce(impulse, ForceMode.VelocityChange);
 
-            // Play jump animation
-            animator.SetBool("isJumping", true);
+            if (animator) animator.SetBool("isJumping", true);
         }
-        else if (isJumping && jumpTimer<= 0 && IsGrounded())
+        else if (isJumping && jumpTimer <= 0f && IsGrounded())
         {
             isJumping = false;
-            animator.SetBool("isJumping", false);
+            if (animator) animator.SetBool("isJumping", false);
         }
 
-        // --- Gravity switch---
+        // --- Gravity switch (Left Mouse Button) ---
         if (Input.GetMouseButtonDown(0))
             TryFlip();
 
@@ -98,8 +114,11 @@ public class RunnerController : MonoBehaviour
         if (fallingFromFlip && IsGrounded())
         {
             fallingFromFlip = false;
-            animator.SetBool("isFalling", false);
+            if (animator) animator.SetBool("isFalling", false);
         }
+
+        // Keep character facing forward every frame
+        AlignToForward();
     }
 
     void FixedUpdate()
@@ -120,6 +139,9 @@ public class RunnerController : MonoBehaviour
         {
             if (GameManager.Instance != null) GameManager.Instance.GameOver();
         }
+
+        // Final safeguard for rotation after all updates
+        AlignToForward();
     }
 
     void TryFlip()
@@ -127,19 +149,20 @@ public class RunnerController : MonoBehaviour
         if (flipTimer > 0f) return;
         if (fallingFromFlip) return;
 
-        Vector3 impulse = (onCeiling ? Vector3.down : Vector3.up) * jumpForce/4;
+        // Small impulse away from the current plane to feel responsive
+        Vector3 impulse = (onCeiling ? Vector3.down : Vector3.up) * (jumpForce * 0.25f);
         Vector3 v = rb.velocity; v.y = 0f; rb.velocity = v;
         rb.AddForce(impulse, ForceMode.VelocityChange);
 
         flipTimer = flipCooldown;
         onCeiling = !onCeiling;
 
-        // Visual flip
-        transform.rotation = transform.rotation * Quaternion.Euler(0f, 0f, 180f);
+        // DO NOT multiply rotation; just realign to forward with flipped up
+        AlignToForward();
 
         // Enter falling animation until grounded again
         fallingFromFlip = true;
-        animator.SetBool("isFalling", true);
+        if (animator) animator.SetBool("isFalling", true);
     }
 
     bool IsGrounded()

@@ -1683,8 +1683,8 @@ MonoBehaviour:
   gravityAccel: 25
   flipCooldown: 0.25
   groundCheckDist: 1.1
-  deathBelowY: -1
-  deathAboveY: 11
+  deathBelowY: -2
+  deathAboveY: 12
   animator: {fileID: 1046179211}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
