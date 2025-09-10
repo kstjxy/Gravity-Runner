@@ -41,7 +41,7 @@ public class RunnerController : MonoBehaviour
         rb = GetComponent<Rigidbody>();
         rb.useGravity = false;  // custom gravity
 
-        //animator.SetBool("isJumping", false);
+        animator.SetBool("isJumping", false);
         animator.SetBool("isFalling", false);
     }
 
@@ -78,14 +78,12 @@ public class RunnerController : MonoBehaviour
             rb.AddForce(impulse, ForceMode.VelocityChange);
 
             // Play jump animation
-            
-            //animator.SetBool("isJumping", true);
+            animator.SetBool("isJumping", true);
         }
         else if (isJumping && jumpTimer<= 0 && IsGrounded())
         {
-            
             isJumping = false;
-            //animator.SetBool("isJumping", false);
+            animator.SetBool("isJumping", false);
         }
 
         // --- Gravity switch---
@@ -100,7 +98,6 @@ public class RunnerController : MonoBehaviour
         if (fallingFromFlip && IsGrounded())
         {
             fallingFromFlip = false;
-            //animator.Play("Run", 0, 0f);
             animator.SetBool("isFalling", false);
         }
     }
@@ -142,7 +139,6 @@ public class RunnerController : MonoBehaviour
 
         // Enter falling animation until grounded again
         fallingFromFlip = true;
-        //animator.Play("Fall", 0, 0f);
         animator.SetBool("isFalling", true);
     }
 
