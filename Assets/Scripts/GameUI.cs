@@ -36,10 +36,19 @@ public class GameUI : MonoBehaviour
 
     void Update()
     {
-        // Allow replay via R while the panel is visible
-        if (gameOverPanel && gameOverPanel.activeSelf && Input.GetKeyDown(KeyCode.R))
+        if (!gameOverPanel || !gameOverPanel.activeSelf) return;
+
+        if (Input.GetKeyDown(KeyCode.R))
         {
             GameManager.Instance.Replay();
+        }
+        else if (Input.GetKeyDown(KeyCode.Escape))
+        {
+        #if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+        #else
+            Application.Quit();
+        #endif
         }
     }
 }
