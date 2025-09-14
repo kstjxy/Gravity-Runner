@@ -20,6 +20,7 @@ public class CameraFollow : MonoBehaviour
     void LateUpdate()
     {
         if (!target || !player) return;
+        if (player.deathCooldown > 0) return;
 
         // Detect flip event
         if (player.onCeiling != prevOnCeiling)
