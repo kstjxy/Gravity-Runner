@@ -132,9 +132,16 @@ public class RunnerController : MonoBehaviour
         if (idleCooldown > 0f)
         {
             idleCooldown -= Time.deltaTime;
-            if (idleCooldown <= 0)
+
+            // show remaining seconds (ceil so 2.3 -> "3")
+            int secs = Mathf.CeilToInt(Mathf.Max(0f, idleCooldown));
+            var ui = GameManager.Instance ? GameManager.Instance.gameUI : null;
+            if (ui) ui.SetIdleCountdown(secs);
+
+            if (idleCooldown <= 0f)
             {
-                animator.Play("Run");
+                if (ui) ui.HideIdleCountdown();
+                if (animator) animator.Play("Run");
             }
             return;
         }

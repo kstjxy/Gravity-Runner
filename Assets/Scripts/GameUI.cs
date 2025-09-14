@@ -12,9 +12,14 @@ public class GameUI : MonoBehaviour
     public TMP_Text finalDistanceText;
     public TMP_Text finalBestText;
 
+    [Header("Idle Countdown")]
+    public TMP_Text idleCountdownText;
+
     void Start()
     {
         if (gameOverPanel) gameOverPanel.SetActive(false);
+
+        if (idleCountdownText) idleCountdownText.gameObject.SetActive(false);
     }
 
     public void SetDistance(float d)
@@ -34,6 +39,20 @@ public class GameUI : MonoBehaviour
         if (finalBestText) finalBestText.text = $"Best: {best:0.0} m";
     }
 
+
+    public void SetIdleCountdown(int seconds)
+    {
+        if (!idleCountdownText) return;
+        idleCountdownText.text = seconds.ToString();
+        if (!idleCountdownText.gameObject.activeSelf)
+            idleCountdownText.gameObject.SetActive(true);
+    }
+
+    public void HideIdleCountdown()
+    {
+        if (idleCountdownText) idleCountdownText.gameObject.SetActive(false);
+    }
+
     void Update()
     {
         if (!gameOverPanel || !gameOverPanel.activeSelf) return;
@@ -44,11 +63,11 @@ public class GameUI : MonoBehaviour
         }
         else if (Input.GetKeyDown(KeyCode.Escape))
         {
-        #if UNITY_EDITOR
+#if UNITY_EDITOR
             UnityEditor.EditorApplication.isPlaying = false;
-        #else
+#else
             Application.Quit();
-        #endif
+#endif
         }
     }
 }
