@@ -103,10 +103,56 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 6736375672136916353, guid: 39a9c4a072a46ac4e9ee2ca4bd7669aa, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4458061672284829375}
+    - targetCorrespondingSourceObject: {fileID: 6736375672136916353, guid: 39a9c4a072a46ac4e9ee2ca4bd7669aa, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3583813105158743369}
   m_SourcePrefab: {fileID: 100100000, guid: 39a9c4a072a46ac4e9ee2ca4bd7669aa, type: 3}
 --- !u!4 &104635708537027504 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 776474194615031849, guid: 39a9c4a072a46ac4e9ee2ca4bd7669aa, type: 3}
   m_PrefabInstance: {fileID: 843627465793528729}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &6253603561984179736 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6736375672136916353, guid: 39a9c4a072a46ac4e9ee2ca4bd7669aa, type: 3}
+  m_PrefabInstance: {fileID: 843627465793528729}
+  m_PrefabAsset: {fileID: 0}
+--- !u!64 &4458061672284829375
+MeshCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6253603561984179736}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 5
+  m_Convex: 1
+  m_CookingOptions: 30
+  m_Mesh: {fileID: 0}
+--- !u!114 &3583813105158743369
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6253603561984179736}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 891361ee5c972b344b726f5e3c8d7df2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  kind: 0

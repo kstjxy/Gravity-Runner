@@ -170,4 +170,25 @@ public class RunnerController : MonoBehaviour
         Vector3 dir = onCeiling ? Vector3.up : Vector3.down;
         return Physics.Raycast(transform.position, dir, groundCheckDist, ~0, QueryTriggerInteraction.Ignore);
     }
+
+    void OnTriggerEnter(Collider other)
+    {
+        if (GameManager.Instance != null && !GameManager.Instance.isRunning) return;
+
+        var cdata = other.GetComponent<ColliderData>();
+        if (cdata == null) return;
+
+        switch (cdata.kind)
+        {
+            case ColliderKind.Obstacle:
+                GameManager.Instance?.GameOver();
+                break;
+
+            case ColliderKind.Pickup:
+                // TODO: handle pickup (increase score, shield, etc.)
+                Destroy(other.gameObject); // simple consume
+                break;
+        }
+    }
+
 }
