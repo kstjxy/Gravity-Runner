@@ -53,6 +53,25 @@ public class GameUI : MonoBehaviour
         if (idleCountdownText) idleCountdownText.gameObject.SetActive(false);
     }
 
+    public void OnClickReplay()
+    {
+        GameManager.Instance?.Replay();
+    }
+
+    public void OnClickMainMenu()
+    {
+        GameManager.Instance?.GoToMenu();
+    }
+
+    public void OnClickExit()
+    {
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+#else
+    Application.Quit();
+#endif
+    }
+
     void Update()
     {
         if (!gameOverPanel || !gameOverPanel.activeSelf) return;
