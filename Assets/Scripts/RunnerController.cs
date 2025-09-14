@@ -92,7 +92,11 @@ public class RunnerController : MonoBehaviour
         if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) xInput = 1f;
 
         // Invert when on ceiling
-        if (onCeiling) xInput *= -1f;
+        bool flipEnabled = Settings.Instance ? Settings.Instance.cameraFlipEnabled : true;
+        if (onCeiling && flipEnabled)
+        {
+            xInput *= -1f;
+        }
 
         // Apply horizontal movement with clamp
         Vector3 pos = transform.position;

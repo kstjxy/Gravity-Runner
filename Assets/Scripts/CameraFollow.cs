@@ -5,7 +5,12 @@ public class CameraFollow : MonoBehaviour
     public Transform target;
     public RunnerController player;
     public Vector3 offset = new Vector3(0f, 3f, -5f);
+    public Vector3 offsetNoFlip = new Vector3(0f, 4f, -10f);
     public float followLerp = 10f;
+
+    [Header("Track Geometry")]
+    [Tooltip("Height of the ceiling (needed to compute mid height when flip is disabled).")]
+    public float ceilHeight = 10f;
 
     [Header("Flip Pulse")]
     [Tooltip("How close the camera gets during a flip (1 = no change, 0.6 = 40% closer).")]
@@ -22,8 +27,10 @@ public class CameraFollow : MonoBehaviour
         if (!target || !player) return;
         if (player.deathCooldown > 0 || player.idleCooldown > 0) return;
 
-        // Detect flip event
-        if (player.onCeiling != prevOnCeiling)
+        bool flipEnabled = Settings.Instance ? Settings.Instance.cameraFlipEnabled : true;
+
+        // Detect flip event (only if flipping enabled)
+        if (flipEnabled && player.onCeiling != prevOnCeiling)
         {
             flipBlend = 1f;
             prevOnCeiling = player.onCeiling;
@@ -33,10 +40,20 @@ public class CameraFollow : MonoBehaviour
         if (flipBlend > 0f)
             flipBlend = Mathf.MoveTowards(flipBlend, 0f, Time.deltaTime / Mathf.Max(0.0001f, flipRecoverTime));
 
-        // Offset: invert vertically when ceiling-running
-        Vector3 baseOffset = player.onCeiling
-            ? new Vector3(offset.x, -Mathf.Abs(offset.y), offset.z)
-            : new Vector3(offset.x, Mathf.Abs(offset.y), offset.z);
+        // Compute base offset
+        Vector3 baseOffset;
+        if (flipEnabled)
+        {
+            // Invert vertically when ceiling-running
+            baseOffset = player.onCeiling
+                ? new Vector3(offset.x, -Mathf.Abs(offset.y), offset.z)
+                : new Vector3(offset.x, Mathf.Abs(offset.y), offset.z);
+        }
+        else
+        {
+            // No flipping: keep camera mid-height
+            baseOffset = offsetNoFlip;
+        }
 
         // Zoom pulse
         Vector3 closerOffset = baseOffset * flipZoomFactor;
@@ -44,11 +61,17 @@ public class CameraFollow : MonoBehaviour
 
         // Position follow
         Vector3 desired = target.position + useOffset;
+        if (!flipEnabled)
+        {
+            desired.y = ceilHeight * 0.5f; // lock mid between floor & ceiling
+        }
         transform.position = Vector3.Lerp(transform.position, desired, Time.deltaTime * followLerp);
 
-        // Always point straight forward (+Z) with correct up
+        // Rotation: always point forward; up depends on flip setting
         Vector3 forward = Vector3.forward;
-        Vector3 up = player.onCeiling ? Vector3.down : Vector3.up;
+        Vector3 up = flipEnabled
+            ? (player.onCeiling ? Vector3.down : Vector3.up)
+            : Vector3.up;
 
         Quaternion lookRot = Quaternion.LookRotation(forward, up);
         transform.rotation = Quaternion.Slerp(transform.rotation, lookRot, Time.deltaTime * followLerp);
