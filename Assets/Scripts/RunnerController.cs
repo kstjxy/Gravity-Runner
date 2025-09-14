@@ -31,9 +31,12 @@ public class RunnerController : MonoBehaviour
 
     private bool fallingFromFlip = false; // true after flip until grounded again
     private bool isJumping = false;
-    public float deathCooldown = 0;
+    
 
     private Rigidbody rb;
+
+    public float deathCooldown = 0;
+    public float idleCooldown = 3f;
 
     // --- Helpers ---
     void AlignToForward()
@@ -57,7 +60,6 @@ public class RunnerController : MonoBehaviour
         {
             animator.SetBool("isJumping", false);
             animator.SetBool("isFalling", false);
-            animator.SetBool("isDead", false);
         }
 
         AlignToForward();
@@ -65,7 +67,7 @@ public class RunnerController : MonoBehaviour
 
     void Update()
     {
-        if (deathCooldown > 0) return;
+        if (idleCooldown > 0 || deathCooldown > 0) return;
 
         // Stop all control if game ended
         if (GameManager.Instance != null && !GameManager.Instance.isRunning) return;
@@ -127,6 +129,15 @@ public class RunnerController : MonoBehaviour
 
     void FixedUpdate()
     {
+        if (idleCooldown > 0f)
+        {
+            idleCooldown -= Time.deltaTime;
+            if (idleCooldown <= 0)
+            {
+                animator.Play("Run");
+            }
+            return;
+        }
         if (deathCooldown > 0) {
             deathCooldown -= Time.deltaTime;
             if (deathCooldown <= 0)
@@ -145,7 +156,7 @@ public class RunnerController : MonoBehaviour
 
     void LateUpdate()
     {
-        if (deathCooldown > 0) return;
+        if (idleCooldown > 0 || deathCooldown > 0) return;
 
         if (GameManager.Instance != null && !GameManager.Instance.isRunning) return;
 
