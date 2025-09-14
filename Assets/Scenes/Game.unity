@@ -896,6 +896,11 @@ MonoBehaviour:
   gapCeilPrefab: {fileID: 3057161718414462267, guid: 0371a4028032d3f418bb6a4dfb04ecc6, type: 3}
   connF2CPrefab: {fileID: 8063755359759605728, guid: c19f81ac0b94f574eba1904890c48ad5, type: 3}
   connC2FPrefab: {fileID: 1215857454658484877, guid: 09568fa7993993041b0509c1c60d2993, type: 3}
+  dispenserPrefab: {fileID: 1217099520300271261, guid: 8be317b801f6f764fa2e8a97f21f1d93, type: 3}
+  longRockPrefab: {fileID: 6027363878176653684, guid: 9dc55d1cbcfc7a644a4fc40b999560b9, type: 3}
+  rockPrefab: {fileID: 7943882750702272303, guid: 79ebc9aec19f60b40915388baf082333, type: 3}
+  sawPrefab: {fileID: 1959574854823661971, guid: 35154e2607570cd46a71bf821aa93aa1, type: 3}
+  spikesPrefab: {fileID: 4270642518142078342, guid: 3415601da994a444fbafb862e9bba761, type: 3}
   ceilHeight: 10
   laneX: 0
   buildAhead: 80

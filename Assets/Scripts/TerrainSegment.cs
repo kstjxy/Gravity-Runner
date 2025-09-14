@@ -23,7 +23,10 @@ public class TerrainSegment : MonoBehaviour
     public SegmentKind kind;
 
     [Tooltip("World-space Z length of this segment.")]
-    public float length = 12f;
+    public float length = 10f;
+
+    [Tooltip("World-space X width of this segment.")]
+    public float width = 15f;
 
     [Header("Placement")]
     public SegmentType type;

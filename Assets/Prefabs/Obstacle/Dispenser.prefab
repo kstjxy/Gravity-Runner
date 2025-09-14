@@ -9,6 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5992706513420465909}
+  - component: {fileID: 2491279189397762232}
   m_Layer: 0
   m_Name: Dispenser
   m_TagString: Untagged
@@ -32,6 +33,21 @@ Transform:
   - {fileID: 8051708446677456570}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2491279189397762232
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1217099520300271261}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1fb930ece360e96458db4117ab0fc6a5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  type: 0
+  length: 2
+  width: 2
 --- !u!1001 &8761127971313116641
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -83,6 +99,14 @@ PrefabInstance:
     - target: {fileID: 5526619306063007483, guid: 322a27068a43962448918cf8b17a1c78, type: 3}
       propertyPath: m_Name
       value: Dispenser_0_0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5526619306063007485, guid: 322a27068a43962448918cf8b17a1c78, type: 3}
+      propertyPath: arrowSpeed
+      value: 0.6
+      objectReference: {fileID: 0}
+    - target: {fileID: 5526619306063007485, guid: 322a27068a43962448918cf8b17a1c78, type: 3}
+      propertyPath: shootingSpeed
+      value: 3
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
