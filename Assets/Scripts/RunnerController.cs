@@ -67,7 +67,18 @@ public class RunnerController : MonoBehaviour
 
     void Update()
     {
-        if (idleCooldown > 0 || deathCooldown > 0) return;
+        // If we're in idle countdown, ignore control
+        if (idleCooldown > 0f) return;
+
+        // If we're dying, stop all jump/flip input and force velocity down to gravity-only
+        if (deathCooldown > 0f)
+        {
+            // Cancel horizontal/vertical player input effects
+            rb.velocity = new Vector3(0f, -rb.velocity.y, 0f);
+
+            // Let FixedUpdate gravity handle pulling us back to ground
+            return;
+        }
 
         // Stop all control if game ended
         if (GameManager.Instance != null && !GameManager.Instance.isRunning) return;
@@ -145,6 +156,7 @@ public class RunnerController : MonoBehaviour
             }
             return;
         }
+
         if (deathCooldown > 0) {
             deathCooldown -= Time.deltaTime;
             if (deathCooldown <= 0)
