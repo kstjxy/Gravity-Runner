@@ -67,7 +67,6 @@ public class RunnerController : MonoBehaviour
     {
         if (deathCooldown > 0) return;
 
-
         // Stop all control if game ended
         if (GameManager.Instance != null && !GameManager.Instance.isRunning) return;
 
@@ -136,6 +135,7 @@ public class RunnerController : MonoBehaviour
             }
             return;
         }
+
         if (GameManager.Instance != null && !GameManager.Instance.isRunning) return;
 
         // Custom gravity
@@ -146,6 +146,7 @@ public class RunnerController : MonoBehaviour
     void LateUpdate()
     {
         if (deathCooldown > 0) return;
+
         if (GameManager.Instance != null && !GameManager.Instance.isRunning) return;
 
         // Death check by Y bounds
@@ -187,6 +188,8 @@ public class RunnerController : MonoBehaviour
 
     void OnTriggerEnter(Collider other)
     {
+        if (deathCooldown > 0) return;
+
         if (GameManager.Instance != null && !GameManager.Instance.isRunning) return;
 
         var cdata = other.GetComponent<ColliderData>();
