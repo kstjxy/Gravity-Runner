@@ -102,7 +102,6 @@ public class RunnerController : MonoBehaviour
         if (invulnTimer > 0f)
             invulnTimer -= Time.deltaTime;
 
-
         // Stop all control if game ended
         if (GameManager.Instance != null && !GameManager.Instance.isRunning) return;
 
@@ -372,6 +371,8 @@ public class RunnerController : MonoBehaviour
 
         // zero vertical velocity so we can smoothly hold mid height
         var v = rb.velocity; v.y = 0f; rb.velocity = v;
+
+        if (animator) animator.Play("Fly");
     }
 
     void EndBoost()
@@ -384,6 +385,8 @@ public class RunnerController : MonoBehaviour
             Destroy(boostVisual);
             boostVisual = null;
         }
-        // Gravity resumes in FixedUpdate; we will naturally land on current plane
+
+        if (animator) animator.Play("Run");
+        invulnTimer = Mathf.Max(invulnTimer, 1f);
     }
 }

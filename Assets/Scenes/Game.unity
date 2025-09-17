@@ -1210,9 +1210,9 @@ MonoBehaviour:
   laneX: 0
   buildAhead: 80
   recycleBehind: 40
-  pickupChance: 0.2
-  pickupCooldownSegments: 5
-  pickupForcePlaceSegments: 10
+  pickupChance: 0.25
+  pickupCooldownSegments: 4
+  pickupForcePlaceSegments: 6
   obstaclePlaceChance: 0.8
   hasFloor: 1
   hasCeil: 0
