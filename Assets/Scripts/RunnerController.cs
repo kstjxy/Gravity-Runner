@@ -2,6 +2,10 @@ using UnityEngine;
 
 public class RunnerController : MonoBehaviour
 {
+    [Header("Pickup Prefabs")]
+    public GameObject shieldPrefab;
+    public GameObject boostPrefab;
+
     [Header("Movement Speeds")]
     public float playerSpeed = 10f;       // forward speed (m/s)
     public float horizontalSpeed = 8f;    // strafe speed (m/s)
@@ -31,12 +35,15 @@ public class RunnerController : MonoBehaviour
 
     private bool fallingFromFlip = false; // true after flip until grounded again
     private bool isJumping = false;
-    
 
     private Rigidbody rb;
 
     public float deathCooldown = 0;
     public float idleCooldown = 3f;
+
+    // --- Shield state ---
+    private bool hasShield = false;
+    private GameObject shieldVisual; // instance of shieldPrefab attached to player
 
     // --- Helpers ---
     void AlignToForward()
@@ -73,10 +80,7 @@ public class RunnerController : MonoBehaviour
         // If we're dying, stop all jump/flip input and force velocity down to gravity-only
         if (deathCooldown > 0f)
         {
-            // Cancel horizontal/vertical player input effects
             rb.velocity = new Vector3(0f, -rb.velocity.y, 0f);
-
-            // Let FixedUpdate gravity handle pulling us back to ground
             return;
         }
 
@@ -91,12 +95,9 @@ public class RunnerController : MonoBehaviour
         if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) xInput = -1f;
         if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) xInput = 1f;
 
-        // Invert when on ceiling
+        // Invert when on ceiling only if camera flip is enabled
         bool flipEnabled = Settings.Instance ? Settings.Instance.cameraFlipEnabled : true;
-        if (onCeiling && flipEnabled)
-        {
-            xInput *= -1f;
-        }
+        if (onCeiling && flipEnabled) xInput *= -1f;
 
         // Apply horizontal movement with clamp
         Vector3 pos = transform.position;
@@ -131,14 +132,12 @@ public class RunnerController : MonoBehaviour
         if (jumpTimer > 0f) jumpTimer -= Time.deltaTime;
 
         // --- Animation state maintenance ---
-        // If we finished a flip and got grounded again, return to Run
         if (fallingFromFlip && IsGrounded())
         {
             fallingFromFlip = false;
             if (animator) animator.SetBool("isFalling", false);
         }
 
-        // Keep character facing forward every frame
         AlignToForward();
     }
 
@@ -148,7 +147,6 @@ public class RunnerController : MonoBehaviour
         {
             idleCooldown -= Time.deltaTime;
 
-            // show remaining seconds (ceil so 2.3 -> "3")
             int secs = Mathf.CeilToInt(Mathf.Max(0f, idleCooldown));
             var ui = GameManager.Instance ? GameManager.Instance.gameUI : null;
             if (ui) ui.SetIdleCountdown(secs);
@@ -161,7 +159,8 @@ public class RunnerController : MonoBehaviour
             return;
         }
 
-        if (deathCooldown > 0) {
+        if (deathCooldown > 0)
+        {
             deathCooldown -= Time.deltaTime;
             if (deathCooldown <= 0)
             {
@@ -180,16 +179,14 @@ public class RunnerController : MonoBehaviour
     void LateUpdate()
     {
         if (idleCooldown > 0 || deathCooldown > 0) return;
-
         if (GameManager.Instance != null && !GameManager.Instance.isRunning) return;
 
         // Death check by Y bounds
         if (transform.position.y < deathBelowY || transform.position.y > deathAboveY)
         {
-            if (GameManager.Instance != null) GameManager.Instance.GameOver();
+            GameManager.Instance?.GameOver();
         }
 
-        // Final safeguard for rotation after all updates
         AlignToForward();
     }
 
@@ -198,7 +195,6 @@ public class RunnerController : MonoBehaviour
         if (flipTimer > 0f) return;
         if (fallingFromFlip) return;
 
-        // Small impulse away from the current plane to feel responsive
         Vector3 impulse = (onCeiling ? Vector3.down : Vector3.up) * (jumpForce * 0.25f);
         Vector3 v = rb.velocity; v.y = 0f; rb.velocity = v;
         rb.AddForce(impulse, ForceMode.VelocityChange);
@@ -206,10 +202,8 @@ public class RunnerController : MonoBehaviour
         flipTimer = flipCooldown;
         onCeiling = !onCeiling;
 
-        // DO NOT multiply rotation; just realign to forward with flipped up
         AlignToForward();
 
-        // Enter falling animation until grounded again
         fallingFromFlip = true;
         if (animator) animator.SetBool("isFalling", true);
     }
@@ -223,24 +217,77 @@ public class RunnerController : MonoBehaviour
     void OnTriggerEnter(Collider other)
     {
         if (deathCooldown > 0) return;
-
         if (GameManager.Instance != null && !GameManager.Instance.isRunning) return;
 
         var cdata = other.GetComponent<ColliderData>();
-        if (cdata == null) return;
+        if (!cdata) return;
 
-        switch (cdata.kind)
+        if (cdata.kind == ColliderKind.Obstacle)
         {
-            case ColliderKind.Obstacle:
-                animator.Play("death");
-                deathCooldown = 1.5f;
-                break;
+            // If we have a shield, consume it and ignore obstacle damage
+            if (hasShield)
+            {
+                ConsumeShield();
+                var col = other.GetComponent<Collider>();
+                if (col) col.enabled = false;
+                return;
+            }
 
-            case ColliderKind.Pickup:
-                // TODO: handle pickup (increase score, shield, etc.)
-                Destroy(other.gameObject); // simple consume
-                break;
+            // No shield -> die
+            if (animator) animator.Play("death");
+            deathCooldown = 1.5f;
+            return;
+        }
+
+        if (cdata.kind == ColliderKind.Pickup)
+        {
+            // Determine pickup type
+            var pData = other.GetComponent<PickupData>();
+            if (!pData)
+            {
+                // If no data, just remove it
+                Destroy(other.gameObject);
+                return;
+            }
+
+            switch (pData.type)
+            {
+                case PickupType.Shield:
+                    TryGainShield();
+                    break;
+
+                case PickupType.Boost:
+                    // TODO: implement boost later
+                    break;
+            }
+
+            // Consume the pickup object
+            Destroy(other.gameObject);
         }
     }
 
+    // -------- Shield helpers --------
+
+    void TryGainShield()
+    {
+        if (hasShield) return;               // only one shield at a time
+        if (!shieldPrefab) return;
+
+        hasShield = true;
+
+        // Spawn visual at the runner center so it follows; no collider needed
+        shieldVisual = Instantiate(shieldPrefab, transform);
+        shieldVisual.transform.localPosition = Vector3.zero;
+        shieldVisual.transform.localRotation = Quaternion.identity;
+    }
+
+    void ConsumeShield()
+    {
+        hasShield = false;
+        if (shieldVisual)
+        {
+            Destroy(shieldVisual);
+            shieldVisual = null;
+        }
+    }
 }

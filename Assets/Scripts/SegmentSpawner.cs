@@ -364,10 +364,6 @@ public class SegmentSpawner : MonoBehaviour
                 go.transform.localPosition = new Vector3(x, 1.5f, z);
                 go.transform.localRotation = Quaternion.identity;
 
-                // Mark as pickup for gameplay triggers
-                var cd = go.GetComponent<ColliderData>();
-                if (!cd) cd = go.AddComponent<ColliderData>();
-                cd.kind = ColliderKind.Pickup;
 
                 // ---- update streak tracking
                 if (!lastPickupType.HasValue || chosenType != lastPickupType.Value)
@@ -387,7 +383,6 @@ public class SegmentSpawner : MonoBehaviour
         return false;
     }
 
-    // ---- Simple AABB helper types in local X/Z ----
     struct RectXZ
     {
         public Vector2 c; // center (x,z)
