@@ -34,20 +34,16 @@ public class SegmentSpawner : MonoBehaviour
     public float buildAhead = 80f;
     public float recycleBehind = 40f;
 
-    // ---- NEW: Pickup spawn tuning ----
     [Header("Pickup Spawn Rules")]
     [Tooltip("Base chance per placeable segment.")]
-    [Range(0f, 1f)] public float pickupChance = 0.10f;      // 10%
+    [Range(0f, 1f)] public float pickupChance = 0.10f;
     [Tooltip("Min placeable segments to wait after placing a pickup.")]
     public int pickupCooldownSegments = 5;
     [Tooltip("Force place if this many placeable segments passed with no pickup.")]
     public int pickupForcePlaceSegments = 10;
 
-    [Header("Pickup Footprint Defaults (local X/Z)")]
-    public float shieldWidth = 1.5f;
-    public float shieldLength = 1.5f;
-    public float boostWidth = 1.5f;
-    public float boostLength = 2.0f;
+    [Header("Obstacle Spawn Rules")]
+    [Range(0f, 1f)] public float obstaclePlaceChance = 0.8f;
 
     // ---- Runtime state ----
     public bool hasFloor = true;
@@ -57,8 +53,9 @@ public class SegmentSpawner : MonoBehaviour
     private readonly LinkedList<TerrainSegment> active = new();
     private SegmentKind? lastKind = null;
 
-    // NEW: pickup placement accounting
     private int placeableSinceLastPickup = 9999; // start large so we're not blocked initially
+    private PickupType? lastPickupType = null;
+    private int samePickupStreak = 0;
 
     void Start()
     {
@@ -82,7 +79,6 @@ public class SegmentSpawner : MonoBehaviour
         hasFloor = true; hasCeil = false;
         lastKind = seg.kind;
 
-        // Do NOT place obstacle or pickup on the start segment per spec
         placeableSinceLastPickup = pickupCooldownSegments; // allow pickup soon after start
     }
 
@@ -143,30 +139,27 @@ public class SegmentSpawner : MonoBehaviour
         // ---- Place Obstacle + maybe Pickup on placeable segments ----
         if (seg.kind == SegmentKind.Floor || seg.kind == SegmentKind.Ceil)
         {
-            // Obstacle first
-            TryPlaceRandomObstacle(seg);
+            // NEW: 80% chance to place an obstacle
+            bool placedObstacle = false;
+            if (Random.value < obstaclePlaceChance)
+                placedObstacle = TryPlaceRandomObstacle(seg);
 
-            // Update counter for placeable segment encountered
+            // Update pickup counters
             placeableSinceLastPickup++;
 
             // Pickup rules
             bool placedPickup = false;
             if (CanPlacePickup())
-            {
                 placedPickup = PlaceRandomPickup(seg);
-            }
 
-            if (placedPickup)
-                placeableSinceLastPickup = 0;       // reset cooldown counter
-            else
-                placeableSinceLastPickup = Mathf.Min(placeableSinceLastPickup, pickupForcePlaceSegments + 1); // cap
+            if (placedPickup) placeableSinceLastPickup = 0;
+            else placeableSinceLastPickup = Mathf.Min(placeableSinceLastPickup, pickupForcePlaceSegments + 1);
         }
 
         ApplyStateTransition(pick);
         lastKind = pick;
     }
 
-    // ----- Allowed kinds, transitions, prefab map are unchanged -----
 
     List<SegmentKind> GetAllowedKinds()
     {
@@ -235,12 +228,12 @@ public class SegmentSpawner : MonoBehaviour
         }
     }
 
-    // ---------------- Obstacle placement (unchanged except bounds calc comments) ----------------
+    // ---------------- Obstacle placement ----------------
 
-    void TryPlaceRandomObstacle(TerrainSegment seg)
+    bool TryPlaceRandomObstacle(TerrainSegment seg)
     {
         GameObject prefab = GetRandomObstaclePrefab();
-        if (!prefab) return;
+        if (!prefab) return false;
 
         var obstacleGO = Instantiate(prefab, seg.transform);
         var data = obstacleGO.GetComponent<ObstacleData>();
@@ -248,22 +241,20 @@ public class SegmentSpawner : MonoBehaviour
         {
             Debug.LogWarning("[SegmentSpawner] Obstacle prefab missing ObstacleData.");
             Destroy(obstacleGO);
-            return;
+            return false;
         }
 
         float halfSegW = seg.width * 0.5f;
+        float halfSegL = seg.length * 0.5f;
 
-        // X bounds (inner) to keep on road; small margin from edges
         float minX = -halfSegW + data.width * 0.5f + 2f;
         float maxX = halfSegW - data.width * 0.5f - 2f;
 
-        // Z bounds: assume segment local Z is approx centered; keep within [-seg.length/2, +seg.length/2]
-        float halfSegL = seg.length * 0.5f;
         float minZ = -halfSegL + data.length * 0.5f;
         float maxZ = halfSegL - data.length * 0.5f;
 
-        Vector3 localPos = Vector3.zero;
-        Quaternion localRot = Quaternion.identity;
+        Vector3 localPos;
+        Quaternion localRot;
 
         if (data.type == ObstacleType.Dispenser)
         {
@@ -285,6 +276,7 @@ public class SegmentSpawner : MonoBehaviour
 
         obstacleGO.transform.localPosition = localPos;
         obstacleGO.transform.localRotation = localRot;
+        return true;
     }
 
     GameObject GetRandomObstaclePrefab()
@@ -305,46 +297,61 @@ public class SegmentSpawner : MonoBehaviour
 
     bool CanPlacePickup()
     {
-        // Only consider when we've met the cooldown
         if (placeableSinceLastPickup < pickupCooldownSegments)
             return false;
 
-        // Force place after N without pickup
         if (placeableSinceLastPickup >= pickupForcePlaceSegments)
             return true;
 
-        // Otherwise random 10% chance
         return Random.value < pickupChance;
     }
 
     bool PlaceRandomPickup(TerrainSegment seg)
     {
-        // Decide type: 1/3 Boost, 2/3 Shield
-        bool pickBoost = (Random.value < (1f / 3f));
-        GameObject prefab = pickBoost ? boostPrefab : shieldPrefab;
+        // Decide type with weighted random (1/3 Boost, 2/3 Shield)
+        // but break streak if we already placed 3 of the same kind consecutively
+        PickupType chosenType;
+
+        if (lastPickupType.HasValue && samePickupStreak >= 3)
+        {
+            // Force switch after 3-in-a-row
+            chosenType = (lastPickupType.Value == PickupType.Boost) ? PickupType.Shield : PickupType.Boost;
+        }
+        else
+        {
+            // Weighted pick: 1/3 boost, 2/3 shield
+            chosenType = (Random.value < (1f / 3f)) ? PickupType.Boost : PickupType.Shield;
+        }
+
+        // Pick prefab based on chosen type
+        GameObject prefab = (chosenType == PickupType.Boost) ? boostPrefab : shieldPrefab;
         if (!prefab) return false;
 
-        // Footprint for overlap tests (local X/Z half sizes)
-        float pw = pickBoost ? boostWidth : shieldWidth;
-        float pl = pickBoost ? boostLength : shieldLength;
-        float hx = pw * 0.5f;
-        float hz = pl * 0.5f;
+        // Get footprint from prefab's PickupData
+        var data = prefab.GetComponent<PickupData>();
+        if (!data)
+        {
+            Debug.LogWarning("[SegmentSpawner] Pickup prefab missing PickupData.");
+            return false;
+        }
 
-        // Segment bounds
+        float hx = data.width * 0.5f;
+        float hz = data.length * 0.5f;
+
+        // Segment bounds in local X/Z
         float halfSegW = seg.width * 0.5f;
         float halfSegL = seg.length * 0.5f;
 
-        float minX = -halfSegW + hx + 0.5f;  // small margin
-        float maxX = halfSegW - hx - 0.5f;
+        float minX = -halfSegW + hx + 1.5f;
+        float maxX = halfSegW - hx - 1.5f;
         float minZ = -halfSegL + hz + 0.5f;
         float maxZ = halfSegL - hz - 0.5f;
 
-        if (minX > maxX || minZ > maxZ) return false; // segment too small
+        if (minX > maxX || minZ > maxZ) return false;
 
-        // Gather obstacle rectangles (local space)
+        // Avoid overlapping previously placed obstacles
         var obsRects = CollectObstacleRects(seg);
 
-        // Try a few random locations to avoid obstacle overlap
         const int kTries = 12;
         for (int attempt = 0; attempt < kTries; attempt++)
         {
@@ -353,21 +360,30 @@ public class SegmentSpawner : MonoBehaviour
 
             if (!OverlapsAny(new RectXZ(new Vector2(x, z), new Vector2(hx, hz)), obsRects))
             {
-                // Place it
                 var go = Instantiate(prefab, seg.transform);
-                go.transform.localPosition = new Vector3(x, 0f, z);
+                go.transform.localPosition = new Vector3(x, 1.5f, z);
                 go.transform.localRotation = Quaternion.identity;
 
-                // Mark as pickup in gameplay (so player can trigger)
+                // Mark as pickup for gameplay triggers
                 var cd = go.GetComponent<ColliderData>();
                 if (!cd) cd = go.AddComponent<ColliderData>();
                 cd.kind = ColliderKind.Pickup;
+
+                // ---- update streak tracking
+                if (!lastPickupType.HasValue || chosenType != lastPickupType.Value)
+                {
+                    lastPickupType = chosenType;
+                    samePickupStreak = 1;
+                }
+                else
+                {
+                    samePickupStreak++;
+                }
 
                 return true;
             }
         }
 
-        // Failed to find non-overlapping spot
         return false;
     }
 
