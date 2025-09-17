@@ -33,19 +33,33 @@ public class RunnerController : MonoBehaviour
     [Header("Animation")]
     public Animator animator;             // assign in inspector (runner model)
 
-    private bool fallingFromFlip = false; // true after flip until grounded again
+    // --- Shield state ---
+    private bool hasShield = false;
+    private GameObject shieldVisual; // instance of shieldPrefab attached to player
+
+    // --- Boost state ---
+    [Header("Boost")]
+    public float boostDuration = 5f;
+    public float boostSpeedMultiplier = 1.5f;
+    [Tooltip("Height to hold during boost (middle between floor and ceil).")]
+    public float midFlyHeight = 5f;
+    [Tooltip("How quickly we move to/from mid height.")]
+    public float boostAscendLerp = 10f;
+
+    private bool isBoosting = false;
+    private float boostTimer = 0f;
+    private float basePlayerSpeed = 0f;
+    private GameObject boostVisual;
+
+    private bool fallingFromFlip = false;
     private bool isJumping = false;
 
     private Rigidbody rb;
 
     public float deathCooldown = 0;
     public float idleCooldown = 3f;
+    private float invulnTimer = 0f;
 
-    // --- Shield state ---
-    private bool hasShield = false;
-    private GameObject shieldVisual; // instance of shieldPrefab attached to player
-
-    // --- Helpers ---
     void AlignToForward()
     {
         // Always face world +Z. Flip 'up' based on ceiling state.
@@ -70,6 +84,7 @@ public class RunnerController : MonoBehaviour
         }
 
         AlignToForward();
+        basePlayerSpeed = playerSpeed; // initial baseline
     }
 
     void Update()
@@ -83,6 +98,10 @@ public class RunnerController : MonoBehaviour
             rb.velocity = new Vector3(0f, -rb.velocity.y, 0f);
             return;
         }
+
+        if (invulnTimer > 0f)
+            invulnTimer -= Time.deltaTime;
+
 
         // Stop all control if game ended
         if (GameManager.Instance != null && !GameManager.Instance.isRunning) return;
@@ -103,11 +122,19 @@ public class RunnerController : MonoBehaviour
         Vector3 pos = transform.position;
         pos += Vector3.right * xInput * horizontalSpeed * Time.deltaTime;
         pos.x = Mathf.Clamp(pos.x, leftLimit, rightLimit);
+
+        // While boosting, keep us at mid height (smoothly)
+        if (isBoosting)
+        {
+            pos.y = Mathf.Lerp(pos.y, midFlyHeight, Time.deltaTime * boostAscendLerp);
+        }
         transform.position = pos;
 
         // --- Jump (W / UpArrow / Space) ---
-        if ((Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.Space))
-            && IsGrounded() && !fallingFromFlip && !isJumping)
+        // During boost we disable jumping (we're flying). Gravity switch is still allowed.
+        if (!isBoosting &&
+            (Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.Space)) &&
+            IsGrounded() && !fallingFromFlip && !isJumping)
         {
             isJumping = true;
             jumpTimer = jumpCooldown;
@@ -125,6 +152,7 @@ public class RunnerController : MonoBehaviour
         }
 
         // --- Gravity switch (Left Mouse Button) ---
+        // Allowed during boost
         if (Input.GetMouseButtonDown(0))
             TryFlip();
 
@@ -139,6 +167,16 @@ public class RunnerController : MonoBehaviour
         }
 
         AlignToForward();
+
+        // --- Boost timer ---
+        if (isBoosting)
+        {
+            boostTimer -= Time.deltaTime;
+            if (boostTimer <= 0f)
+            {
+                EndBoost();
+            }
+        }
     }
 
     void FixedUpdate()
@@ -171,9 +209,18 @@ public class RunnerController : MonoBehaviour
 
         if (GameManager.Instance != null && !GameManager.Instance.isRunning) return;
 
-        // Custom gravity
-        Vector3 gdir = onCeiling ? Vector3.up : Vector3.down;
-        rb.AddForce(gdir * gravityAccel, ForceMode.Acceleration);
+        // Custom gravity:
+        // When boosting, we "fly" at mid height, so we suppress vertical acceleration.
+        if (!isBoosting)
+        {
+            Vector3 gdir = onCeiling ? Vector3.up : Vector3.down;
+            rb.AddForce(gdir * gravityAccel, ForceMode.Acceleration);
+        }
+        else
+        {
+            // keep vertical velocity neutral while boosting
+            var v = rb.velocity; v.y = 0f; rb.velocity = v;
+        }
     }
 
     void LateUpdate()
@@ -195,17 +242,25 @@ public class RunnerController : MonoBehaviour
         if (flipTimer > 0f) return;
         if (fallingFromFlip) return;
 
-        Vector3 impulse = (onCeiling ? Vector3.down : Vector3.up) * (jumpForce * 0.25f);
-        Vector3 v = rb.velocity; v.y = 0f; rb.velocity = v;
-        rb.AddForce(impulse, ForceMode.VelocityChange);
+        // During boost we allow flips, but we don't add vertical impulse (we’re flying).
+        if (!isBoosting)
+        {
+            Vector3 impulse = (onCeiling ? Vector3.down : Vector3.up) * (jumpForce * 0.25f);
+            Vector3 v = rb.velocity; v.y = 0f; rb.velocity = v;
+            rb.AddForce(impulse, ForceMode.VelocityChange);
+        }
 
         flipTimer = flipCooldown;
         onCeiling = !onCeiling;
 
         AlignToForward();
 
-        fallingFromFlip = true;
-        if (animator) animator.SetBool("isFalling", true);
+        // Only set falling anim when not boosting (since we hold mid height)
+        if (!isBoosting)
+        {
+            fallingFromFlip = true;
+            if (animator) animator.SetBool("isFalling", true);
+        }
     }
 
     bool IsGrounded()
@@ -224,12 +279,12 @@ public class RunnerController : MonoBehaviour
 
         if (cdata.kind == ColliderKind.Obstacle)
         {
-            // If we have a shield, consume it and ignore obstacle damage
+            if (invulnTimer > 0f) return;
+            // If we have a shield, consume it and disable this obstacle's collider
             if (hasShield)
             {
                 ConsumeShield();
-                var col = other.GetComponent<Collider>();
-                if (col) col.enabled = false;
+                invulnTimer = 0.5f;
                 return;
             }
 
@@ -241,14 +296,8 @@ public class RunnerController : MonoBehaviour
 
         if (cdata.kind == ColliderKind.Pickup)
         {
-            // Determine pickup type
             var pData = other.GetComponent<PickupData>();
-            if (!pData)
-            {
-                // If no data, just remove it
-                Destroy(other.gameObject);
-                return;
-            }
+            if (!pData) { Destroy(other.gameObject); return; }
 
             switch (pData.type)
             {
@@ -257,12 +306,11 @@ public class RunnerController : MonoBehaviour
                     break;
 
                 case PickupType.Boost:
-                    // TODO: implement boost later
+                    TryStartBoost();
                     break;
             }
 
-            // Consume the pickup object
-            Destroy(other.gameObject);
+            Destroy(other.gameObject); // consume pickup
         }
     }
 
@@ -275,10 +323,12 @@ public class RunnerController : MonoBehaviour
 
         hasShield = true;
 
-        // Spawn visual at the runner center so it follows; no collider needed
         shieldVisual = Instantiate(shieldPrefab, transform);
         shieldVisual.transform.localPosition = Vector3.zero;
         shieldVisual.transform.localRotation = Quaternion.identity;
+
+        var col = shieldVisual.GetComponent<Collider>();
+        if (col) col.enabled = false;
     }
 
     void ConsumeShield()
@@ -289,5 +339,51 @@ public class RunnerController : MonoBehaviour
             Destroy(shieldVisual);
             shieldVisual = null;
         }
+    }
+
+    // -------- Boost helpers --------
+
+    void TryStartBoost()
+    {
+        if (!boostPrefab) { StartBoost(); return; } // no visual assigned, still boost
+
+        // Spawn visual and disable its collider if any
+        boostVisual = Instantiate(boostPrefab, transform);
+        boostVisual.transform.localPosition = Vector3.zero;
+        boostVisual.transform.localRotation = Quaternion.identity;
+
+        var col = boostVisual.GetComponent<Collider>();
+        if (col) col.enabled = false;
+
+        StartBoost();
+    }
+
+    void StartBoost()
+    {
+        if (!isBoosting)
+        {
+            // record baseline and apply speed multiplier
+            basePlayerSpeed = Mathf.Approximately(basePlayerSpeed, 0f) ? playerSpeed : basePlayerSpeed;
+            playerSpeed = basePlayerSpeed * boostSpeedMultiplier;
+        }
+
+        isBoosting = true;
+        boostTimer = boostDuration;
+
+        // zero vertical velocity so we can smoothly hold mid height
+        var v = rb.velocity; v.y = 0f; rb.velocity = v;
+    }
+
+    void EndBoost()
+    {
+        isBoosting = false;
+        playerSpeed = basePlayerSpeed; // restore baseline speed
+
+        if (boostVisual)
+        {
+            Destroy(boostVisual);
+            boostVisual = null;
+        }
+        // Gravity resumes in FixedUpdate; we will naturally land on current plane
     }
 }

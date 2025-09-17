@@ -2702,8 +2702,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4922ecc14fa50ca43b87637b59619906, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  shieldPrefab: {fileID: 7027792228641376122, guid: f48559b3e298e8440a586de0e9b2acc8, type: 3}
-  boostPrefab: {fileID: 5268367728215179119, guid: 13e62899824621b4fa267b8cb792bb58, type: 3}
+  shieldPrefab: {fileID: 871324411638548333, guid: 5fae79d5c764c3b44b9a080a80a0b852, type: 3}
+  boostPrefab: {fileID: 3676554860531327467, guid: 7c3def371b2b8614bb5d78ec6e318587, type: 3}
   playerSpeed: 15
   horizontalSpeed: 8
   jumpForce: 10
@@ -2717,6 +2717,10 @@ MonoBehaviour:
   deathBelowY: -3
   deathAboveY: 13
   animator: {fileID: 1046179211}
+  boostDuration: 5
+  boostSpeedMultiplier: 1.5
+  midFlyHeight: 5
+  boostAscendLerp: 10
   deathCooldown: 0
   idleCooldown: 3
 --- !u!1 &2092016955
