@@ -1808,6 +1808,7 @@ MonoBehaviour:
   player: {fileID: 2025446036}
   camFollow: {fileID: 963194229}
   gameUI: {fileID: 551621852}
+  sfxLose: {fileID: 8300000, guid: d27c79c49c23bdd4ebdab9b0f99d76a1, type: 3}
 --- !u!4 &1006071665
 Transform:
   m_ObjectHideFlags: 0
@@ -2702,14 +2703,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4922ecc14fa50ca43b87637b59619906, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  sfxBreak: {fileID: 8300000, guid: ad42b0f87bd8fd94da70276265debbf8, type: 3}
+  sfxHit: {fileID: 8300000, guid: a37f44cbf8c2a7443a3c361efa2f233a, type: 3}
+  sfxPickup: {fileID: 8300000, guid: 2b12793c727fe8a479db832cd1de0dd9, type: 3}
+  sfxSwitch: {fileID: 8300000, guid: 1c678356596f92d4c9d35107d748625c, type: 3}
   shieldPrefab: {fileID: 871324411638548333, guid: 5fae79d5c764c3b44b9a080a80a0b852, type: 3}
   boostPrefab: {fileID: 3676554860531327467, guid: 7c3def371b2b8614bb5d78ec6e318587, type: 3}
   playerSpeed: 15
   horizontalSpeed: 8
   jumpForce: 10
   jumpCooldown: 0.2
-  leftLimit: -5.5
-  rightLimit: 5.5
+  leftLimit: -5.25
+  rightLimit: 5.25
   onCeiling: 0
   gravityAccel: 25
   flipCooldown: 0.25
@@ -2718,7 +2723,7 @@ MonoBehaviour:
   deathAboveY: 13
   animator: {fileID: 1046179211}
   boostDuration: 5
-  boostSpeedMultiplier: 1.5
+  boostSpeedMultiplier: 2
   midFlyHeight: 5
   boostAscendLerp: 10
   deathCooldown: 0

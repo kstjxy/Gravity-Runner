@@ -10,6 +10,9 @@ public class GameManager : MonoBehaviour
     public CameraFollow camFollow; // assign Main Camera's CameraFollow
     public GameUI gameUI;          // assign the UI script on your Canvas
 
+    [Header("SFX")]
+    public AudioClip sfxLose;    // on game over (you can also play this in GameManager)
+
     public float distance { get; private set; }
     public float bestDistance { get; private set; }
     public bool isRunning { get; private set; } = true;
@@ -68,6 +71,8 @@ public class GameManager : MonoBehaviour
 
         // Show UI popup
         if (gameUI) gameUI.ShowGameOver(distance, bestDistance);
+
+        if (AudioManager.Instance && sfxLose) AudioManager.Instance.PlaySFX(sfxLose);
 
         var rb = player ? player.GetComponent<Rigidbody>() : null;
         if (rb) { rb.velocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }

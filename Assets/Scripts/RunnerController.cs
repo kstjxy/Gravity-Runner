@@ -2,6 +2,12 @@ using UnityEngine;
 
 public class RunnerController : MonoBehaviour
 {
+    [Header("SFX")]
+    public AudioClip sfxBreak;   // shield breaks on obstacle
+    public AudioClip sfxHit;     // hit obstacle (no shield)
+    public AudioClip sfxPickup;  // on pickup (shield/boost)
+    public AudioClip sfxSwitch;  // on gravity switch
+
     [Header("Pickup Prefabs")]
     public GameObject shieldPrefab;
     public GameObject boostPrefab;
@@ -40,7 +46,7 @@ public class RunnerController : MonoBehaviour
     // --- Boost state ---
     [Header("Boost")]
     public float boostDuration = 5f;
-    public float boostSpeedMultiplier = 1.5f;
+    public float boostSpeedMultiplier = 2f;
     [Tooltip("Height to hold during boost (middle between floor and ceil).")]
     public float midFlyHeight = 5f;
     [Tooltip("How quickly we move to/from mid height.")]
@@ -241,6 +247,8 @@ public class RunnerController : MonoBehaviour
         if (flipTimer > 0f) return;
         if (fallingFromFlip) return;
 
+        if (AudioManager.Instance) AudioManager.Instance.PlaySFX(sfxSwitch);
+
         // During boost we allow flips, but we don't add vertical impulse (we’re flying).
         if (!isBoosting)
         {
@@ -284,11 +292,13 @@ public class RunnerController : MonoBehaviour
             {
                 ConsumeShield();
                 invulnTimer = 0.5f;
+                if (AudioManager.Instance) AudioManager.Instance.PlaySFX(sfxBreak);
                 return;
             }
 
             // No shield -> die
             if (animator) animator.Play("death");
+            if (AudioManager.Instance) AudioManager.Instance.PlaySFX(sfxHit);
             deathCooldown = 1.5f;
             return;
         }
@@ -308,7 +318,7 @@ public class RunnerController : MonoBehaviour
                     TryStartBoost();
                     break;
             }
-
+            if (AudioManager.Instance) AudioManager.Instance.PlaySFX(sfxPickup);
             Destroy(other.gameObject); // consume pickup
         }
     }
@@ -387,6 +397,6 @@ public class RunnerController : MonoBehaviour
         }
 
         if (animator) animator.Play("Run");
-        invulnTimer = Mathf.Max(invulnTimer, 1f);
+        invulnTimer = Mathf.Max(invulnTimer, 0.5f);
     }
 }
