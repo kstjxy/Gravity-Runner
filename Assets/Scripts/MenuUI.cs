@@ -7,8 +7,14 @@ public class MenuUI : MonoBehaviour
 {
     [Header("UI Refs")]
     public TMP_Text bestText;
-    public GameObject settingsPanel;  // assign Panel
-    public Toggle cameraFlipToggle;   // assign Toggle
+    public GameObject settingsPanel;   // panel contains BGMSlider + SFXSlider
+    public Toggle cameraFlipToggle;
+
+    [Header("Volume Sliders (inside Settings Panel)")]
+    public Slider bgmSlider;
+    public Slider sfxSlider;
+
+    private bool listenersHooked = false;
 
     void Start()
     {
@@ -17,36 +23,50 @@ public class MenuUI : MonoBehaviour
 
         if (settingsPanel) settingsPanel.SetActive(false);
 
-        // Initialize toggle from saved Settings
-        if (Settings.Instance && cameraFlipToggle)
+        // Ensure AudioManager reflects saved volumes on boot
+        if (Settings.Instance && AudioManager.Instance)
         {
-            cameraFlipToggle.isOn = Settings.Instance.cameraFlipEnabled;
+            AudioManager.Instance.SetBGMVolume(Settings.Instance.bgmVolume);
+            AudioManager.Instance.SetSFXVolume(Settings.Instance.sfxVolume);
         }
+
+        // Hook listeners once (sliders might be inactive initially since panel is closed)
+        HookSliderListeners();
     }
 
-    public void StartGame()
+    void OnDestroy()
     {
-        // Assumes "Game" is added to Build Settings
-        SceneManager.LoadScene("Game");
+        UnhookSliderListeners();
     }
 
-    // Hook to Settings button
+    public void StartGame() => SceneManager.LoadScene("Game");
+
     public void OpenSettings()
     {
         if (!settingsPanel) return;
-        if (Settings.Instance && cameraFlipToggle)
-            cameraFlipToggle.isOn = Settings.Instance.cameraFlipEnabled;
+
+        // Sync current values into UI every time the panel is shown
+        if (Settings.Instance)
+        {
+            if (cameraFlipToggle)
+                cameraFlipToggle.isOn = Settings.Instance.cameraFlipEnabled;
+
+            if (bgmSlider)
+                bgmSlider.value = Settings.Instance.bgmVolume;
+
+            if (sfxSlider)
+                sfxSlider.value = Settings.Instance.sfxVolume;
+        }
+
         settingsPanel.SetActive(true);
     }
 
-    // Hook to Back button on panel
     public void CloseSettings()
     {
         if (!settingsPanel) return;
         settingsPanel.SetActive(false);
     }
 
-    // Hook to Toggle.onValueChanged
     public void OnCameraFlipToggleChanged(bool isOn)
     {
         if (Settings.Instance)
@@ -60,5 +80,35 @@ public class MenuUI : MonoBehaviour
 #else
         Application.Quit();
 #endif
+    }
+
+    // --- internal ---
+
+    void HookSliderListeners()
+    {
+        if (listenersHooked) return;
+        if (!Settings.Instance) return;
+
+        if (bgmSlider)
+            bgmSlider.onValueChanged.AddListener(Settings.Instance.SetBGMVolume);
+
+        if (sfxSlider)
+            sfxSlider.onValueChanged.AddListener(Settings.Instance.SetSFXVolume);
+
+        listenersHooked = true;
+    }
+
+    void UnhookSliderListeners()
+    {
+        if (!listenersHooked) return;
+        if (!Settings.Instance) return;
+
+        if (bgmSlider)
+            bgmSlider.onValueChanged.RemoveListener(Settings.Instance.SetBGMVolume);
+
+        if (sfxSlider)
+            sfxSlider.onValueChanged.RemoveListener(Settings.Instance.SetSFXVolume);
+
+        listenersHooked = false;
     }
 }
